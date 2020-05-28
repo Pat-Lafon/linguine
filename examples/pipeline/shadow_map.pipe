@@ -1,7 +1,7 @@
 // The goal of this program is to draw two objects
 // Each uses the same shader pair and meshes, but different model matrices and colors
 
-// Some kinda metaprogramming 
+// Some kinda metaprogramming
 with type T:
 declare type varying;
 
@@ -17,60 +17,106 @@ typescript void main() {
     // the set of readable member variables of a program are the out variable of FRAGMENT
     // We can't yet write or read these these variables
     program = glsl_compile(vertex, fragment);
+    shadow_program = glsl_compile(shadow_vertex, shadow_fragment);
     ...
+
+    mesh1 = ...;
+    mesh2 = ...;
+
+
     model1 = mat4.create();
     mat4.translate(model1, model1, [10., 10., 10.]);
     model2 = mat4.create();
     mat4.translate(model2, model2, [-10., -10., -10.]);
-    while (true) {
-        render(program, get_mesh(), get_view(), get_projection());
+
+
+    let shadowFramebuffer = gl.createFramebuffer();
+    let shadowDepthTexture = gl.createTexture();
+    let renderBuffer = gl.createRenderbuffer()
+
+    bind shadowFramebuffer to gl.FRAMEBUFFER,
+         shadowDepthTexture to gl.TEXTURE_2D,
+         renderBuffer to gl.RENDERBUFFER {
+
+        ... // Set up the above buffers
+
+        while (true) {
+            render(program, shadow_program, mesh1, mesh2, get_view(), get_projection(), model1, model2);
+        }
     }
 }
 
-typescript void render(program, shadowProgram, mesh, view, projection) {
-    state.uView = view;
-    state.uProjection = projection;
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFramebuffer);
+typescript void render(program, shadow_program, mesh1, mesh2, view, projection, model1, model2) {
 
     function buildShadowBuffers(mesh: lgl.Mesh, model: mat4) {
-      gl.uniformMatrix4fv(shadowLocations["uModel"], false, model);
-      lgl.bind_attrib_buffer(gl, shadowLocations["aPosition"] as number, mesh.positions, 3);
-      lgl.bind_element_buffer(gl, mesh.cells);
+        gl.uniformMatrix4fv(shadowLocations["uModel"], false, model);
+        lgl.bind_attrib_buffer(gl, shadowLocations["aPosition"] as number, mesh.positions, 3);
+        lgl.bind_element_buffer(gl, mesh.cells);
 
-      gl.drawElements(gl.TRIANGLES, mesh.cell_count, gl.UNSIGNED_SHORT, 0);
-      let errorCode = gl.getError();
-      if (errorCode != 0) {
-        throw errorCode;
-      }
+        gl.drawElements(gl.TRIANGLES, mesh.cell_count, gl.UNSIGNED_SHORT, 0);
+        let errorCode = gl.getError();
+        if (errorCode != 0) {
+            throw errorCode;
+        }
     }
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    with_mesh(color = [1, 1, 0]);
+    with shadow_program {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        buildShadowBuffers(mesh1, model1);
+        buildShadowBuffers(mesh2, model2);
 
-    state.current = program;
+        let width = gl.drawingBufferWidth;
+        let height = gl.drawingBufferHeight;
+        gl.viewport(0, 0, width, height);
+        gl.clearColor(0., 0., 0., 0.);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
 
-    with_mesh = partial(program, vPosition = mesh.positions);
+    with program.vertex as vertex {
+        bind view to uView,
+             projection to uProjection,
+             mesh.positions to vertex.vPosition,
+             [1, 0, 1] to color {
 
-    with_mesh(color = [1, 0, 1], state.uModel = model1);
-    with_mesh(color = [1, 0, 1], state.uModel = model2);
+            bind model1 to uModel {
+                vertex();
+            }
+            bind model2 to uModel {
+                vertex();
+            }
+        }
+    }
 }
 
-program void vertex(vec3 aPosition, sampler2D shadowmap, vec2 uv) {
-    out vec3 vColor; // associated fragment must have 'in' associated with each out;
+program vertex() {
+    in vec3 vPosition;
+    in sampler2D shadowmap;
+    in vec2 uv;
+    out vec3 vColor;
 
     void main() {
       vColor = color;
       gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.);
+
+      with current.fragment as fragment {
+        bind vPosition to fragment.vPosition,
+             shadowmap to fragment.shadowmap,
+             uv to fragment.uv {
+
+            fragment();
+        }
+      }
     }
 }
 
-program void fragment(vec3 vPosition, sampler2D shadowmap, vec2 uv) {
+program fragment() {
+    in vec3 vPosition;
+    in sampler2D shadowmap;
+    in vec2 uv;
     out vec4 gl_FragColor;
 
     void main() {
         ...
         gl_FragColor = ...;
     }
-
 }

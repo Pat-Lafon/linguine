@@ -3,7 +3,7 @@ using "../opengl";
 // The goal of this program is to draw two objects
 // Each uses the same shader pair and meshes, but different model matrices and colors
 
-// Some kinda metaprogramming 
+// Some kinda metaprogramming
 with type T:
 declare type varying;
 
