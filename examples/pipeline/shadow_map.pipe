@@ -16,7 +16,7 @@ typescript void main() {
     // { in(VERTEX) } U { uniform(VERTEX) } U { uniform(FRAGMENT) }
     // the set of readable member variables of a program are the out variable of FRAGMENT
     // We can't yet write or read these these variables
-    program = glsl_compile(vertex, fragment);
+    object_program = glsl_compile(vertex, fragment);
     shadow_program = glsl_compile(shadow_vertex, shadow_fragment);
     ...
 
@@ -29,24 +29,13 @@ typescript void main() {
     model2 = mat4.create();
     mat4.translate(model2, model2, [-10., -10., -10.]);
 
-
-    let shadowFramebuffer = gl.createFramebuffer();
-    let shadowDepthTexture = gl.createTexture();
-    let renderBuffer = gl.createRenderbuffer()
-
-    bind shadowFramebuffer to gl.FRAMEBUFFER,
-         shadowDepthTexture to gl.TEXTURE_2D,
-         renderBuffer to gl.RENDERBUFFER {
-
-        ... // Set up the above buffers
-
-        while (true) {
-            render(program, shadow_program, mesh1, mesh2, get_view(), get_projection(), model1, model2);
-        }
+    while (true) {
+        render(object_program, shadow_program, mesh1, mesh2, get_view(), get_projection(), model1, model2);
     }
+
 }
 
-typescript void render(program, shadow_program, mesh1, mesh2, view, projection, model1, model2) {
+typescript void render(object_program, shadow_program, mesh1, mesh2, view, projection, model1, model2) {
 
     function buildShadowBuffers(mesh: lgl.Mesh, model: mat4) {
         gl.uniformMatrix4fv(shadowLocations["uModel"], false, model);
@@ -61,28 +50,39 @@ typescript void render(program, shadow_program, mesh1, mesh2, view, projection, 
     }
 
     with shadow_program {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        buildShadowBuffers(mesh1, model1);
-        buildShadowBuffers(mesh2, model2);
+        let shadowFramebuffer = gl.createFramebuffer();
+        let shadowDepthTexture = gl.createTexture();
+        let renderBuffer = gl.createRenderbuffer();
 
-        let width = gl.drawingBufferWidth;
-        let height = gl.drawingBufferHeight;
-        gl.viewport(0, 0, width, height);
-        gl.clearColor(0., 0., 0., 0.);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        ... // Set up the above buffers
+
+        bind shadowFramebuffer to gl.FRAMEBUFFER,
+            shadowDepthTexture to gl.TEXTURE_2D,
+            renderBuffer to gl.RENDERBUFFER {
+
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            buildShadowBuffers(mesh1, model1);
+            buildShadowBuffers(mesh2, model2);
+
+            let width = gl.drawingBufferWidth;
+            let height = gl.drawingBufferHeight;
+            gl.viewport(0, 0, width, height);
+            gl.clearColor(0., 0., 0., 0.);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        }
     }
 
-    with program.vertex as vertex {
+    with object_program.vertex as vertex{
         bind view to uView,
              projection to uProjection,
              mesh.positions to vertex.vPosition,
              [1, 0, 1] to color {
 
             bind model1 to uModel {
-                vertex();
+                vertex(object_program);
             }
             bind model2 to uModel {
-                vertex();
+                vertex(object_program);
             }
         }
     }
@@ -94,18 +94,18 @@ program vertex() {
     in vec2 uv;
     out vec3 vColor;
 
-    void main() {
-      vColor = color;
-      gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.);
+    void main(object_program) {
+        vColor = color;
+        gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.);
 
-      with current.fragment as fragment {
-        bind vPosition to fragment.vPosition,
-             shadowmap to fragment.shadowmap,
-             uv to fragment.uv {
+        with object_program.fragment as fragment{
+            bind vPosition to fragment.vPosition,
+                shadowmap to fragment.shadowmap,
+                uv to fragment.uv {
 
-            fragment();
+                object_program.fragment();
+            }
         }
-      }
     }
 }
 
@@ -118,5 +118,7 @@ program fragment() {
     void main() {
         ...
         gl_FragColor = ...;
+        
+        draw();
     }
 }
