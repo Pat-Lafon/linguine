@@ -37,10 +37,12 @@ typescript void render(program, mesh, view, projection) {
         bind view to uView and projection to uProjection {
             bind mesh to vertex.aPosition {
                 bind model1 to uModel {
-                    vertex();
+                    vertex(fragment);
+                    program.draw(...);
                 }
                 bind model2 to uModel {
-                    vertex();
+                    vertex(fragment);
+                    program.draw(...);
                 }
             }
         }
@@ -50,7 +52,7 @@ typescript void render(program, mesh, view, projection) {
 program vertex {
     in vec3 aPosition;
     out vec4 gl_Position;
-    void main() {
+    void main(fragment) {
         vec3 pos = vec3(uView * uModel * vec4(aPosition, 1.));
         with fragment {
             bind pos to fragment.vPosition {
@@ -61,7 +63,7 @@ program vertex {
     }
 }
 
-program fragment {
+parallel<vec3[]->vec3> fragment {
     in vec3 vPosition;
     out vec4 gl_FragColor;
     void main() {
