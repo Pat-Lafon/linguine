@@ -17,6 +17,7 @@ typescript void main() {
     // the set of readable member variables of a program are the out variable of FRAGMENT
     // We can't yet write or read to these variables
     program = glsl_compile(vertex, fragment);
+
     ...
     model1 = mat4.create();
     mat4.translate(model1, model1, [10., 10., 10.]);
@@ -49,8 +50,11 @@ typescript void render(program, mesh, view, projection) {
     }
 }
 
-program vertex {
+vertex(vec3[] aPosition, vec3 uColor)
+
+parallel vertex {
     in vec3 aPosition;
+    in vec3 uColor;
     out vec4 gl_Position;
     void main(fragment) {
         vec3 pos = vec3(uView * uModel * vec4(aPosition, 1.));
@@ -63,7 +67,7 @@ program vertex {
     }
 }
 
-parallel<vec3[]->vec3> fragment {
+program fragment {
     in vec3 vPosition;
     out vec4 gl_FragColor;
     void main() {
