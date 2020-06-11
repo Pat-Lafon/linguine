@@ -36,36 +36,36 @@ typescript void render(program, mesh, view, projection) {
     // Binds the current program (restricted to a value)
     model1;
     model2;
-    with vertex {
+    with vertex execute vertex.run(...) {
+        // before we called program.run(...)?
+        // Maybe we want to pipe/send the output of run() to draw?
         bind view to uView and projection to uProjection {
-            bind mesh to vertex.aPosition {
+            bind mesh to vertex.aPosition, [1.0, 0.0, 0.0] to uColor {
                 bind model1 to uModel {
                     // the ready function checks that all inputs have been initialized
-                    vertex.ready();
-                    // Actually run the program
-                    // Calls the main function of vertex
-                    program.run(...);
+                    ready();
+                    // I then want the expression after the execute keyword to be used at some point using the bindings of this scope
+                    // Also handles
                 }
                 bind model2 to uModel {
-                    vertex.ready();
-                    program.run(...);
+                    ready();
                 }
             }
         }
     }
 }
 
-@param aPosition:vec3[][] -> vec3
+@param aPosition:vec3[] -> vec3
 parallel vertex {
     in vec3 aPosition;
     in vec3 uColor;
     out vec4 gl_Position;
     void main(fragment) {
         vec3 pos = vec3(uView * uModel * vec4(aPosition, 1.));
-        with fragment {
+        with fragment execute fragment.run() {
             bind pos to fragment.vPosition {
                 // ready check is static and isn't run
-                fragment.ready();
+                ready();
             }
         }
         gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.);
