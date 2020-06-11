@@ -16,7 +16,10 @@ typescript void main() {
     // compiling a program recovers its member variables statically
     // the set of readable member variables of a program are the out variable of FRAGMENT
     // We can't yet write or read to these variables
-    program = glsl_compile(vertex, fragment);
+
+
+    // glsl_compile takes in (graphics) descriptors for gpu code. Spits out a compiled program that needs to have it's initial values bound and called to render
+    program = glsl_compile(vertex(fragment));
 
     ...
     model1 = mat4.create();
@@ -29,8 +32,7 @@ typescript void main() {
 }
 
 typescript void render(program, mesh, view, projection) {
-    state.uProjection = projection;
-
+    vertex = program.vertex;
     // Binds the current program (restricted to a value)
     model1;
     model2;
@@ -38,20 +40,22 @@ typescript void render(program, mesh, view, projection) {
         bind view to uView and projection to uProjection {
             bind mesh to vertex.aPosition {
                 bind model1 to uModel {
-                    vertex(fragment);
-                    program.draw(...);
+                    // the ready function checks that all inputs have been initialized
+                    vertex.ready();
+                    // Actually run the program
+                    // Calls the main function of vertex
+                    program.run(...);
                 }
                 bind model2 to uModel {
-                    vertex(fragment);
-                    program.draw(...);
+                    vertex.ready();
+                    program.run(...);
                 }
             }
         }
     }
 }
 
-vertex(vec3[] aPosition, vec3 uColor)
-
+@param aPosition:vec3[][] -> vec3
 parallel vertex {
     in vec3 aPosition;
     in vec3 uColor;
@@ -60,7 +64,8 @@ parallel vertex {
         vec3 pos = vec3(uView * uModel * vec4(aPosition, 1.));
         with fragment {
             bind pos to fragment.vPosition {
-                fragment();
+                // ready check is static and isn't run
+                fragment.ready();
             }
         }
         gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.);
