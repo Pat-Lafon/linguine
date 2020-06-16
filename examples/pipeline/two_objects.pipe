@@ -1,4 +1,19 @@
 using "../opengl";
+/*
+def glsl_compile(vertex:VERTEX, fragment:FRAGMENT) {
+    program = glCreateProgram();
+    vert_sh = compile(vertex);
+    frag_sh = compile(fragment);
+    glAttachShader(program, vert_sh);
+    glAttachShader(program, frag_sh);
+    glLinkProgram(program);
+    return program;
+}
+
+def attribute : T[] -> T
+
+def index : unit -> int
+*/
 
 // The goal of this program is to draw two objects
 // Each uses the same shader pair and meshes, but different model matrices and colors
@@ -19,7 +34,8 @@ typescript void main() {
 
 
     // glsl_compile takes in (graphics) descriptors for gpu code. Spits out a compiled program that needs to have it's initial values bound and called to render
-    program = glsl_compile(vertex(fragment));
+    program = glsl_compile(vertex, fragment);
+    // Rely on glsl_compile checking the bounds of our program
 
     ...
     model1 = mat4.create();
@@ -32,42 +48,36 @@ typescript void main() {
 }
 
 typescript void render(program, mesh, view, projection) {
-    vertex = program.vertex;
     // Binds the current program (restricted to a value)
     model1;
     model2;
-    with vertex execute vertex.run(...) {
+    with program {
         // before we called program.run(...)?
         // Maybe we want to pipe/send the output of run() to draw?
         bind view to uView and projection to uProjection {
-            bind mesh to vertex.aPosition, [1.0, 0.0, 0.0] to uColor {
+            bind mesh to program.aPosition, [1.0, 0.0, 0.0] to uColor {
                 bind model1 to uModel {
-                    // the ready function checks that all inputs have been initialized
-                    ready();
-                    // I then want the expression after the execute keyword to be used at some point using the bindings of this scope
-                    // Also handles
+                    run();
                 }
                 bind model2 to uModel {
-                    ready();
+                    run();
                 }
             }
         }
     }
 }
 
-@param aPosition:vec3[] -> vec3
+
+@attribute aPosition
+@index gl_VertexID
 parallel vertex {
+    in int gl_VertexID
     in vec3 aPosition;
     in vec3 uColor;
+    out vec3 vPosition
     out vec4 gl_Position;
-    void main(fragment) {
-        vec3 pos = vec3(uView * uModel * vec4(aPosition, 1.));
-        with fragment execute fragment.run() {
-            bind pos to fragment.vPosition {
-                // ready check is static and isn't run
-                ready();
-            }
-        }
+    void main() {
+        vec3 vPosition = vec3(uView * uModel * vec4(aPosition, 1.));
         gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.);
     }
 }
