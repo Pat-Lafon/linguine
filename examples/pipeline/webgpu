@@ -1,0 +1,67 @@
+impl bind(program, value, location) {
+    alloc = { let vertex_buffer = device.create_buffer_with_data(bytemuck::cast_slice(VERTICES), wgpu::BufferUsage::VERTEX);
+    program.set_vertex_buffer(0, &vertex_buffer, 0, 0);
+     }
+    dealloc(){};
+}
+
+<rust
+fn compile_shader(shader, shader_type, device) {
+    let mut contents = String::new();
+    let mut vert_file = glsl_to_spirv::compile(&contents, shader)
+        .unwrap_or_else(|_| panic!("{}: {}", "You gave a bad shader source", contents));
+    let mut vs = Vec::new();
+    vert_file
+        .read_to_end(&mut vs)
+        .expect("Somehow reading the file got interrupted");
+    // Take the shader, ...,  and return
+    device.create_shader_module(&wgpu::read_spirv(std::io::Cursor::new(&vs[..])).unwrap())
+}
+>
+
+def webgpu_compile(vertex:VERTEX, fragment:FRAGMENT, draw) {
+    // Create an adaptor and a device
+    compile_shader(vertex, ...)
+    compile_shader(fragment, ...)
+    // Set up the vertex buffer descriptor based on what it takes in
+    // Create a render pipeline
+    // Create the render_pass and bind the pipeline to it
+    // return the render_pass as the program
+    // check success
+}
+
+def draw(in vec4 gl_Position, in vec4 gl_Fra gcolor) {
+    // program.draw(...); This in spirit
+}
+
+def run(program){
+    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {...});
+    let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        // color_attachments is literally where we draw the colors to
+        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+            attachment: &frame.view,
+            resolve_target: None,
+            load_op: wgpu::LoadOp::Clear,
+            store_op: wgpu::StoreOp::Store,
+            clear_color: wgpu::Color::WHITE,
+        }],
+        depth_stencil_attachment: None,
+    });
+
+    // The order must be set_pipeline -> set a bind_group if needed -> set a vertex buffer -> set an index buffer -> do draw
+    // Otherwise we crash out
+    rpass.set_pipeline(&render_pipeline);
+    /* rpass.set_bind_group(0, &bind_group, &[]); */
+    rpass.set_vertex_buffer(0, &vertex_buffer, 0, 0);
+    rpass.draw(num_verticies, num_instances);
+}
+
+// We wanted to somehow include that this will loop so we can try to do some kind of loop operation
+// (T[] -> T)
+param attribute(x : T[]) : T = #loop <glsl x>
+
+param uniform(x : T) : T = <glsl x>
+
+// (unit -> int)
+param constant<gl_VertexID>() : int = <glsl gl_VertexID>
+param constant<...>() : T = <glsl ...>

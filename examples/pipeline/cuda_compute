@@ -1,0 +1,25 @@
+// inside compute
+def compile(){
+    // CUDA already abstracts over c code if that is the version I'm using
+    // If I could just add __GLOBAL__ consistently then I wouldn't need to do much here except set up a struct to hold args as they are bound. Then execute the function in run
+}
+
+interface X {
+    out int result;
+}
+
+// I think bind also has to be defined
+imp bind(program, value, location) {
+    alloc(){ cudaMallocManaged(&location, sizeof(value));
+            // move(value, location) // Some way of moving the value to the location after we set it up }
+
+    dealloc(){ cudaFree(location); }
+}
+
+def run()
+
+// location is passed in as an argument
+// result is available from the pipe operator
+def write(int[] location, in int result)
+
+param unroll(array: T[]) : T = array

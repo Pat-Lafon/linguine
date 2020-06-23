@@ -1,0 +1,65 @@
+impl bind<attribute>(program, value, location) {
+    alloc(){ bind_location = gl.getAttributeLocation(program, location);
+              gl.bindBuffer(gl.ARRAY_BUFFER, value);
+              gl.vertexAttribPointer(bind_location, size, gl.FLOAT, false, 0, 0);
+              gl.enableVertexAttribArray(bind_location); }
+    dealloc(){};
+}
+
+impl bind<uniform>(program, value, location) {
+    alloc(){ bind_location = gl.getUniformLocation(program, location);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, value);
+            //There will probably need to be a bit of magic here to use the correct uniform method below depending on the type of value
+            gl.uniformMatrix4fv(bind_ocation, false, value);
+
+            gl.enableVertexAttribArray(bind_location); }
+    dealloc(){};
+}
+
+
+interface VERTEX {
+    out vec4 gl_Position;
+}
+
+interface FRAGMENT {
+    out vec4 gl_FragColor;
+}
+
+interface DRAW {
+    in vec4 gl_Position;
+    in vec4 gl_FragColor;
+}
+
+// How do we know that vertex/fragment is valid or do we need to convert?
+def glsl_compile(vertex:VERTEX, fragment:FRAGMENT, draw:DRAW) {
+    // We would currently ignore draw as there is only one function to be called. Maybe later we would swap in different functions and use this value
+    js <
+        program = glCreateProgram();
+        vert_sh = compile(vertex);
+        frag_sh = compile(fragment);
+        glAttachShader(program, vert_sh);
+        glAttachShader(program, frag_sh);
+        glLinkProgram(program);
+        return program;
+    >
+    // check success
+}
+
+def draw(in vec4 gl_Position, in vec4 gl_FragColor){
+    // Currently this is just the drawElements method as in run but we may want to supply a different one here.
+}
+
+def run (program : Program) {
+    cell_count = // Store this value somewhere and grab it here;
+    program.drawElements(gl.TRIANGLES, cell_count, gl.UNSIGNED_SHORT, 0);
+}
+
+// We wanted to somehow include that this will loop so we can try to do some kind of loop operation
+// (T[] -> T)
+param attribute(x : T[]) : T = #loop <glsl x>
+
+param uniform(x : T) : T = <glsl x>
+
+// (unit -> int)
+param constant<gl_VertexID>() : int = <glsl gl_VertexID>
+param constant<...>() : T = <glsl ...>

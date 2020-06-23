@@ -1,0 +1,69 @@
+//https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread.h.html
+
+impl bind(program, value, location) {
+    alloc(){
+        // Store location, value pairs as a dictionary or something
+        // The start of an implementation like
+        add_arg(&program->arg, location, value);
+     }
+    dealloc(){};
+}
+
+typedef void** (*Function)(void* args);
+
+struct Programs {
+    pthread_t thread;
+    Function func;
+    void** result;
+    int args_length
+    void* args;
+}program_t;
+
+
+interface PROGRAM {
+    out void** result;
+}
+
+// How do we know that vertex/fragment is valid or do we need to convert?
+def glsl_compile(function) : program_t*{
+    c<
+        #include <pthread.h>
+        args_length = // get number of inputs from function somehow;
+        program_t *p = malloc(offsetof(program_t, args), args_length * sizeof(void *));
+
+        p -> args_length;
+
+        return p;
+    >
+    // check success
+}
+
+def run (program_t* program) : PROGRAM{
+    c <
+        #include <pthread.h>
+        pthread_create(&program->thread, NULL, program->function, program->args);
+
+        ...
+
+        pthread_join(program->thread, program->result);
+    >
+}
+
+def write(program_t* program, location){
+    c <
+        // Probably something smarter than this if everything is a dict
+        *location = program->result;
+    >
+}
+
+// We wanted to somehow include that this will loop so we can try to do some kind of loop operation
+// (T[] -> T)
+param attribute(x : T[]) : T = #loop <glsl x>
+
+param uniform(x : T) : T = <glsl x>
+
+// (unit -> int)
+param constant<gl_VertexID>() : int = <glsl gl_VertexID>
+param constant<...> : T = <glsl ...>
+
+param scolor() : T = <glsl >

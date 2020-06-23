@@ -1,32 +1,27 @@
-using "../compute";
-/*
-// inside compute
-def compile 
-def unroll : T[] -> T
-*/
-
+using "compute";
 
 int factor;
 
 void main() {
     compiled_multiplier = compile(multiplier);
-    int[3] result;
-    bind mut result to SHADER_OUT {
-        with compiled_multiplier {
-            bind 3 to factor, [1, 2, 3] to multiplier.var1 {
-                    run();
-                }
-            }
+    int[3] result_comp;
+    with compiled_multiplier {
+        bind 3 to factor, [1, 2, 3] to compiled_multiplier.var1 {
+            compiled_multiplier.run() | write(result_comp);
         }
-        print result;
     }
+
+    print result_comp;
 }
 
 @unroll var1;
-program multiplier {
+program multiplier : X {
     in int var1;
-    out int var2;
+    out int result;
+
     void main() {
-        var2 = var1 * factor;
+        result = var1 * factor;
     }
 }
+
+program adder {}
